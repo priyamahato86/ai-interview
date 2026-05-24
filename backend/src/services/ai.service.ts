@@ -1,69 +1,81 @@
-import { createRequire } from "module"
 import { GoogleGenAI } from "@google/genai"
-import { z } from "zod"
-import { zodToJsonSchema } from "zod-to-json-schema"
+import { PDFParse } from "pdf-parse"
 import puppeteer from "puppeteer"
-
-const _require = createRequire(import.meta.url)
-const pdfParse = _require("pdf-parse") as (
-    buf: Buffer
-) => Promise<{ text: string; numpages: number }>
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY ?? "" })
 
-// ── Schemas ───────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-const interviewReportZodSchema = z.object({
-    matchScore: z
-        .number()
-        .describe("Score 0-100 indicating how well the candidate matches the job"),
-    technicalQuestions: z.array(
-        z.object({
-            question: z.string().describe("Technical question likely to be asked"),
-            intention: z.string().describe("Why the interviewer asks this"),
-            answer: z.string().describe("Key points and approach for answering"),
-        })
-    ),
-    behavioralQuestions: z.array(
-        z.object({
-            question: z.string().describe("Behavioral question likely to be asked"),
-            intention: z.string().describe("Why the interviewer asks this"),
-            answer: z.string().describe("Key points and approach for answering"),
-        })
-    ),
-    skillGaps: z.array(
-        z.object({
-            skill: z.string().describe("Skill the candidate is lacking"),
-            severity: z
-                .enum(["low", "medium", "high"])
-                .describe("Impact of this gap on candidacy"),
-        })
-    ),
-    preparationPlan: z.array(
-        z.object({
-            day: z.number().describe("Day number starting from 1"),
-            focus: z.string().describe("Main topic for the day"),
-            tasks: z.array(z.string()).describe("Concrete tasks for the day"),
-        })
-    ),
-    title: z.string().describe("Job title derived from the job description"),
-})
+export interface InterviewReportAIResult {
+    title: string
+    matchScore: number
+    technicalQuestions: { question: string; intention: string; answer: string }[]
+    behavioralQuestions: { question: string; intention: string; answer: string }[]
+    skillGaps: { skill: string; severity: "low" | "medium" | "high" }[]
+    preparationPlan: { day: number; focus: string; tasks: string[] }[]
+}
 
-export type InterviewReportAIResult = z.infer<typeof interviewReportZodSchema>
+// ── Gemini-native response schemas ────────────────────────────────────────────
 
-const resumeHtmlZodSchema = z.object({
-    html: z
-        .string()
-        .describe(
-            "Complete self-contained HTML with inline CSS for the resume, ATS-friendly"
-        ),
-})
+const questionItemSchema = {
+    type: "object",
+    properties: {
+        question: { type: "string" },
+        intention: { type: "string" },
+        answer: { type: "string" },
+    },
+    required: ["question", "intention", "answer"],
+}
+
+const interviewReportSchema = {
+    type: "object",
+    properties: {
+        title: { type: "string", description: "Job title derived from the job description" },
+        matchScore: { type: "number", description: "Score 0-100 indicating how well the candidate matches the job" },
+        technicalQuestions: { type: "array", items: questionItemSchema },
+        behavioralQuestions: { type: "array", items: questionItemSchema },
+        skillGaps: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    skill: { type: "string" },
+                    severity: { type: "string", enum: ["low", "medium", "high"] },
+                },
+                required: ["skill", "severity"],
+            },
+        },
+        preparationPlan: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    day: { type: "number" },
+                    focus: { type: "string" },
+                    tasks: { type: "array", items: { type: "string" } },
+                },
+                required: ["day", "focus", "tasks"],
+            },
+        },
+    },
+    required: ["title", "matchScore", "technicalQuestions", "behavioralQuestions", "skillGaps", "preparationPlan"],
+}
+
+const resumeHtmlSchema = {
+    type: "object",
+    properties: {
+        html: { type: "string", description: "Complete self-contained HTML with inline CSS for the resume, ATS-friendly" },
+    },
+    required: ["html"],
+}
 
 // ── PDF text extraction ───────────────────────────────────────────────────────
 
 export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-    const data = await pdfParse(buffer)
-    const text = data.text.trim()
+    const parser = new PDFParse({ data: buffer })
+    const result = await parser.getText()
+    await parser.destroy()
+    const text = result.text.trim()
     if (!text) throw new Error("Could not extract text from the uploaded PDF.")
     return text
 }
@@ -91,14 +103,12 @@ ${jobDescription}
 Provide 5–8 technical questions, 4–6 behavioral questions, all relevant skill gaps, and a 7-day preparation plan tailored to close those gaps.`
 
     const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
             responseMimeType: "application/json",
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            responseSchema: zodToJsonSchema(interviewReportZodSchema as any, {
-                target: "openApi3",
-            }) as any,
+            responseSchema: interviewReportSchema as any,
         },
     })
 
@@ -152,14 +162,12 @@ Requirements:
 - Every piece of content must be derivable from the provided resume or self-description — do not invent facts`
 
     const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
             responseMimeType: "application/json",
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            responseSchema: zodToJsonSchema(resumeHtmlZodSchema as any, {
-                target: "openApi3",
-            }) as any,
+            responseSchema: resumeHtmlSchema as any,
         },
     })
 

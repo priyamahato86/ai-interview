@@ -39,6 +39,7 @@ export const generateInterviewReportController = async (
         selfDescription,
         jobDescription,
         ...aiResult,
+        title: aiResult.title?.trim() || jobDescription.split("\n").find(l => l.trim())?.slice(0, 100) || "Interview Report",
     })
 
     res.status(201).json({
