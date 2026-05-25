@@ -3,27 +3,16 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-
-const schema = z
-  .object({
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    email: z.string().email("Enter a valid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-type SignupFields = z.infer<typeof schema>;
+import {
+  registerSchema,
+  type RegisterInput,
+} from "@/lib/schemas/auth";
 
 export function SignupForm() {
   const { register: registerUser } = useAuth();
@@ -34,9 +23,9 @@ export function SignupForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<SignupFields>({ resolver: zodResolver(schema) });
+  } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
 
-  const onSubmit = async (data: SignupFields) => {
+  const onSubmit = async (data: RegisterInput) => {
     setApiError(null);
     try {
       await registerUser(data.username, data.email, data.password);

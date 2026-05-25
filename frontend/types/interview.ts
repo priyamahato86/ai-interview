@@ -1,41 +1,20 @@
-export interface TechnicalQuestion {
-  question: string;
-  intention: string;
-  answer: string;
-}
+// Re-export types from local schemas
+// Types are defined in @/lib/schemas/interview.ts
 
-export interface BehavioralQuestion {
-  question: string;
-  intention: string;
-  answer: string;
-}
+export type {
+  InterviewReport,
+  InterviewReportSummary,
+  TechnicalQuestion,
+  BehavioralQuestion,
+  SkillGap,
+  PreparationPlan,
+} from "@/lib/schemas/interview";
 
-export interface SkillGap {
-  skill: string;
-  severity: "low" | "medium" | "high";
-}
-
-export interface PreparationPlan {
-  day: number;
-  focus: string;
-  tasks: string[];
-}
-
-export interface InterviewReportSummary {
-  _id: string;
-  matchScore: number;
-  title: string;
-  user: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface InterviewReport extends InterviewReportSummary {
-  jobDescription: string;
-  resume?: string;
-  selfDescription?: string;
-  technicalQuestions: TechnicalQuestion[];
-  behavioralQuestions: BehavioralQuestion[];
-  skillGaps: SkillGap[];
-  preparationPlan: PreparationPlan[];
-}
+export {
+  interviewReportSchema,
+  interviewReportSummarySchema,
+  technicalQuestionSchema,
+  behavioralQuestionSchema,
+  skillGapSchema,
+  preparationPlanSchema,
+} from "@/lib/schemas/interview";

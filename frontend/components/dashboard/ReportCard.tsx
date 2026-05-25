@@ -18,31 +18,42 @@ function formatDate(iso: string) {
 
 export default function ReportCard({ report }: ReportCardProps) {
   return (
-    <div className="feat-card group flex flex-col gap-5 rounded-2xl border border-gray-800 bg-gray-900 p-6 transition-all duration-300 hover:border-indigo-500/50">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium uppercase tracking-widest text-indigo-400 mb-1.5">
-            Interview Report
-          </p>
-          <h3 className="text-base font-semibold text-white leading-snug truncate">
-            {report.title}
-          </h3>
-          <p className="mt-1.5 text-xs text-gray-500">{formatDate(report.createdAt)}</p>
-        </div>
-        <MatchScoreRing score={report.matchScore} size={80} />
-      </div>
+    <Link
+      href={`/dashboard/report/${report._id}`}
+      className="group block"
+    >
+      <div className="relative overflow-hidden rounded-xl border border-gray-800/80 bg-gray-900/90 px-4 py-3.5 transition-all duration-200 hover:border-indigo-500/40 hover:shadow-md hover:shadow-indigo-500/5">
 
-      <div className="mt-auto pt-4 border-t border-gray-800">
-        <Link
-          href={`/dashboard/report/${report._id}`}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600/10 border border-indigo-600/30 px-4 py-2.5 text-sm font-medium text-indigo-400 transition-all duration-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
-        >
-          View Report
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+        {/* Top accent line */}
+        <div className="absolute top-0 left-4 right-4 h-px bg-linear-to-r from-transparent via-indigo-500/40 to-transparent" />
+
+        {/* Header: Badge + Score */}
+        <div className="flex items-start justify-between gap-3 mb-2">
+          {/* Badge */}
+          <span className="inline-flex items-center rounded-md bg-indigo-500/10 border border-indigo-500/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-400">
+            Interview
+          </span>
+
+          {/* Score Ring */}
+          <MatchScoreRing score={report.matchScore} size={52} />
+        </div>
+
+        {/* Title */}
+        <h3 className="text-sm font-medium text-white leading-snug mb-1.5 group-hover:text-indigo-200 transition-colors line-clamp-2">
+          {report.title}
+        </h3>
+
+        {/* Date */}
+        <p className="text-[11px] text-gray-500 mb-2.5">{formatDate(report.createdAt)}</p>
+
+        {/* View Report Button - Compact */}
+        <div className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600/10 border border-indigo-500/25 px-3 py-2 text-xs font-medium text-indigo-400 transition-all duration-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600">
+          <span>View Report</span>
+          <svg className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
           </svg>
-        </Link>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }

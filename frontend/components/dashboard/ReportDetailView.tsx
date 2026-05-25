@@ -150,7 +150,7 @@ export default function ReportDetailView({ id }: { id: string }) {
     if (!user) return;
     interviewApi
       .getReportById(id)
-      .then((res) => setReport(res.data.interviewReport))
+      .then((res) => setReport(res))
       .catch(() => setError("Failed to load report."))
       .finally(() => setLoading(false));
   }, [user, id]);

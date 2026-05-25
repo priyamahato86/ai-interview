@@ -84,7 +84,7 @@ export default function DashboardPage() {
     if (!user) return;
     interviewApi
       .getAllReports()
-      .then((res) => setReports(res.data.interviewReports))
+      .then((res) => setReports(res))
       .catch(() => setError("Failed to load reports."))
       .finally(() => setLoading(false));
   }, [user]);
@@ -166,7 +166,7 @@ export default function DashboardPage() {
                     {getGreeting()}
                   </span>
                   <span className="h-px w-4 bg-indigo-700/60" />
-                  <span className="text-xs text-gray-600">
+                  <span className="text-xs text-gray-400">
                     {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
                   </span>
                 </div>
@@ -240,12 +240,12 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <p
-                        className={`text-lg font-bold leading-none ${s.empty ? "text-gray-700" : s.valueColor}`}
+                        className={`text-lg font-bold leading-none ${s.empty ? "text-gray-500" : s.valueColor}`}
                         style={{ fontFamily: "var(--font-fraunces)" }}
                       >
                         {s.value}
                       </p>
-                      <p className="mt-0.5 text-[10px] font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      <p className="mt-0.5 text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
                         {s.label}
                       </p>
                     </div>
@@ -301,9 +301,9 @@ export default function DashboardPage() {
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">
                 Recent Reports
               </h2>
-              <span className="text-xs text-gray-700">{reports.length} total</span>
+              <span className="text-xs font-medium text-indigo-400">{reports.length} total</span>
             </div>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {reports.map((report) => (
                 <ReportCard key={report._id} report={report} />
               ))}
@@ -348,13 +348,13 @@ export default function DashboardPage() {
                   Generate First Report
                 </Link>
 
-                <p className="mt-4 text-xs text-gray-700">Ready in ~60 seconds · No credit card needed</p>
+                <p className="mt-4 text-xs text-gray-500">Ready in ~60 seconds · No credit card needed</p>
               </div>
             </div>
 
             {/* What you'll get grid */}
             <div>
-              <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-600 text-center">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-500 text-center">
                 Your report will include
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -370,7 +370,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-white leading-snug">{f.title}</p>
-                      <p className="mt-1 text-[10px] text-gray-600 leading-relaxed hidden sm:block">{f.desc}</p>
+                      <p className="mt-1 text-[10px] text-gray-500 leading-relaxed hidden sm:block">{f.desc}</p>
                     </div>
                   </div>
                 ))}

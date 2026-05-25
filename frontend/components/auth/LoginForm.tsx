@@ -3,20 +3,16 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-
-const schema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type LoginFields = z.infer<typeof schema>;
+import {
+  loginSchema,
+  type LoginInput,
+} from "@/lib/schemas/auth";
 
 export function LoginForm() {
   const { login } = useAuth();
@@ -27,12 +23,13 @@ export function LoginForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFields>({ resolver: zodResolver(schema) });
+  } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
 
-  const onSubmit = async (data: LoginFields) => {
+  const onSubmit = async (data: LoginInput) => {
     setApiError(null);
     try {
-      await login(data.email, data.password);
+      // login accepts email or username
+      await login(data.email ?? data.username ?? "", data.password);
       router.push("/");
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -94,7 +91,7 @@ export function LoginForm() {
       </Button>
 
       <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-        Don&apos;t have an account?{" "}
+        Don't have an account?{" "}
         <Link
           href="/signup"
           className="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"

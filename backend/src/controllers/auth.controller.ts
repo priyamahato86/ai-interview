@@ -4,6 +4,7 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 import { User } from "../models/User.js";
 import { BlacklistedToken } from "../models/BlacklistedToken.js";
 import { extractToken } from "../middleware/auth.middleware.js";
+import type { RegisterInput, LoginInput, ResetPasswordInput } from "../schemas/auth.js";
 
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -26,12 +27,8 @@ const setAuthCookie = (res: Response, token: string): void => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, email, password } = req.body ?? {};
-    if (!username || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "username, email and password are required" });
-    }
+    // Data is validated by middleware - no manual checks needed
+    const { username, email, password } = req.body as RegisterInput;
 
     const existing = await User.findOne({
       $or: [{ email }, { username }],
@@ -63,13 +60,9 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, username, password } = req.body ?? {};
+    // Data is validated by middleware - no manual checks needed
+    const { email, username, password } = req.body as LoginInput;
     const identifier = email ?? username;
-    if (!identifier || !password) {
-      return res
-        .status(400)
-        .json({ message: "email/username and password are required" });
-    }
 
     const user = await User.findOne({
       $or: [{ email: identifier }, { username: identifier }],
@@ -118,9 +111,7 @@ export const login = async (req: Request, res: Response) => {
 
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
-    const { email } = req.body ?? {};
-    if (!email) return res.status(400).json({ message: "email is required" });
-
+    const { email } = req.body;
     const user = await User.findOne({ email });
     // Don't reveal whether the email exists
     if (!user) {
@@ -208,12 +199,8 @@ export const logout = async (req: Request, res: Response) => {
 
 export const resetPassword = async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body ?? {};
-    if (!token || !newPassword) {
-      return res
-        .status(400)
-        .json({ message: "token and newPassword are required" });
-    }
+    // Data is validated by middleware - no manual checks needed
+    const { token, newPassword } = req.body as ResetPasswordInput;
 
     const hashedToken = crypto
       .createHash("sha256")
