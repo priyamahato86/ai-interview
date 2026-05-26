@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 const ScoreRing = () => (
   <div className="relative flex-none">
@@ -31,6 +34,11 @@ const ScoreRing = () => (
 );
 
 export function HeroSection() {
+  const { user, loading } = useAuth();
+
+  const ctaHref = user ? "/dashboard" : "/login";
+  const ctaLabel = "Start for Free";
+
   return (
     <section className="relative min-h-screen flex items-center bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 overflow-hidden pt-16">
 
@@ -72,10 +80,10 @@ export function HeroSection() {
             {/* CTAs */}
             <div className="anim-up d4 flex flex-wrap items-center gap-4 mb-8">
               <Link
-                href="/signup"
+                href={ctaHref}
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm bg-white text-indigo-950 hover:bg-indigo-100 transition-colors shadow-lg shadow-indigo-950/60"
               >
-                Start for Free
+                {ctaLabel}
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                 </svg>
@@ -160,7 +168,7 @@ export function HeroSection() {
 
               {/* Card CTA */}
               <Link
-                href="/signup"
+                href={user ? "/generate" : "/signup"}
                 className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
               >
                 Generate My Report

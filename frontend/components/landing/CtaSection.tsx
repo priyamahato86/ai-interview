@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 export function CtaSection() {
+  const { user } = useAuth();
   return (
     <section className="relative bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 py-28 overflow-hidden border-t border-white/10">
 
@@ -31,22 +35,24 @@ export function CtaSection() {
         <div className="flex flex-wrap items-center justify-center gap-4">
           {/* Inverted primary button (white on gradient) */}
           <Link
-            href="/signup"
+            href={user ? "/dashboard" : "/signup"}
             className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-sm bg-white text-indigo-950 hover:bg-indigo-100 transition-colors shadow-xl shadow-indigo-950/60"
           >
-            Get Started Free
+            {user ? "Go to Dashboard" : "Get Started Free"}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
             </svg>
           </Link>
 
-          {/* Ghost */}
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-medium border border-white/20 text-indigo-200 hover:bg-white/5 transition-colors"
-          >
-            Already have an account
-          </Link>
+          {/* Ghost — only shown for guests */}
+          {!user && (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-medium border border-white/20 text-indigo-200 hover:bg-white/5 transition-colors"
+            >
+              Already have an account
+            </Link>
+          )}
         </div>
 
         {/* Feature bullets under CTA */}

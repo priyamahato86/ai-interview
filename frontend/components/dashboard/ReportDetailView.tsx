@@ -6,7 +6,9 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { interviewApi } from "@/lib/interviewApi";
 import MatchScoreRing from "./MatchScoreRing";
+import ResumeCustomizationModal from "@/components/resume/ResumeCustomizationModal";
 import type { InterviewReport, SkillGap } from "@/types/interview";
+import type { ResumeCustomization } from "@/types/resume";
 
 type Section = "technical" | "behavioral" | "roadmap";
 
@@ -141,6 +143,7 @@ export default function ReportDetailView({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<Section>("technical");
   const [downloading, setDownloading] = useState(false);
+  const [showCustomizationModal, setShowCustomizationModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -155,10 +158,11 @@ export default function ReportDetailView({ id }: { id: string }) {
       .finally(() => setLoading(false));
   }, [user, id]);
 
-  const handleDownload = async () => {
+  const handleDownload = async (customization: ResumeCustomization) => {
+    setShowCustomizationModal(false);
     setDownloading(true);
     try {
-      await interviewApi.downloadResume(id);
+      await interviewApi.downloadResume(id, customization);
     } catch {
       // silently ignore
     } finally {
@@ -228,7 +232,7 @@ export default function ReportDetailView({ id }: { id: string }) {
           <div className="flex items-center gap-4 shrink-0">
             <span className="hidden md:block text-xs text-gray-600">{formatDate(report.createdAt)}</span>
             <button
-              onClick={handleDownload}
+              onClick={() => setShowCustomizationModal(true)}
               disabled={downloading}
               className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-4 py-2 text-sm font-semibold text-white transition-colors"
             >
@@ -239,7 +243,7 @@ export default function ReportDetailView({ id }: { id: string }) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
               )}
-              Download Resume
+              Generate Resume
             </button>
           </div>
         </div>
@@ -457,6 +461,13 @@ export default function ReportDetailView({ id }: { id: string }) {
           </main>
         </div>
       </div>
+
+      <ResumeCustomizationModal
+        isOpen={showCustomizationModal}
+        onClose={() => setShowCustomizationModal(false)}
+        onDownload={handleDownload}
+        loading={downloading}
+      />
     </div>
   );
 }

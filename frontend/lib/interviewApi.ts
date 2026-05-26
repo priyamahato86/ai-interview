@@ -6,6 +6,7 @@ import {
   type InterviewReport,
   type InterviewReportSummary,
 } from "@/lib/schemas/interview";
+import type { ResumeCustomization } from "@/types/resume";
 
 export { type InterviewReport, type InterviewReportSummary };
 
@@ -38,15 +39,34 @@ export const interviewApi = {
     return result.data;
   },
 
-  downloadResume: async (id: string) => {
-    const response = await api.get(`/interview-reports/${id}/resume`, {
+  downloadResume: async (id: string, customization?: Partial<ResumeCustomization>) => {
+    const params = new URLSearchParams();
+    if (customization) {
+      Object.entries(customization).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (typeof value === "object") {
+            Object.entries(value as Record<string, boolean>).forEach(([nestedKey, nestedValue]) => {
+              // Send "1"/"0" instead of "true"/"false" for booleans
+              params.append(`${key}[${nestedKey}]`, nestedValue ? "1" : "0");
+            });
+          } else if (typeof value === "boolean") {
+            params.append(key, value ? "1" : "0");
+          } else {
+            params.append(key, String(value));
+          }
+        }
+      });
+    }
+    const queryString = params.toString();
+    const url = `/interview-reports/${id}/resume${queryString ? `?${queryString}` : ""}`;
+    const response = await api.get(url, {
       responseType: "blob",
     });
-    const url = URL.createObjectURL(new Blob([response.data]));
+    const blobUrl = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
     const link = document.createElement("a");
-    link.href = url;
+    link.href = blobUrl;
     link.download = `resume_${id}.pdf`;
     link.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(blobUrl);
   },
 };

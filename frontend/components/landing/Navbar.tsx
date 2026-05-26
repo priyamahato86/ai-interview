@@ -66,6 +66,12 @@ export function Navbar() {
           >
             How it works
           </a>
+          <a
+            href="#pricing"
+            className="px-3.5 py-2 rounded-lg text-sm font-medium text-indigo-200/75 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            Pricing
+          </a>
         </div>
 
         {/* ── Right actions ────────────────────────────────── */}
