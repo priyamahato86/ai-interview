@@ -275,3 +275,139 @@ CRITICAL REQUIREMENTS:
 - Structure HTML semantically with appropriate heading levels (h1 for name, h2 for section titles)
 - Ensure the HTML renders well as a PDF (A4, 210mm x 297mm)`
 }
+
+// ── Chat / Mock Interview ─────────────────────────────────────────────────────
+
+interface ChatContext {
+    jobDescription: string;
+    resume: string;
+    selfDescription: string;
+    matchScore: number;
+    technicalQuestions: { question: string; intention: string; answer: string }[];
+    behavioralQuestions: { question: string; intention: string; answer: string }[];
+    skillGaps: { skill: string; severity: "low" | "medium" | "high" }[];
+}
+
+interface ChatMessage {
+    role: "user" | "assistant";
+    content: string;
+    timestamp?: Date;
+}
+
+export async function generateChatResponse(
+    context: ChatContext,
+    chatHistory: ChatMessage[]
+): Promise<string> {
+    const technicalQs = context.technicalQuestions.map((q, i) =>
+        `${i + 1}. ${q.question}`
+    ).join("\n");
+
+    const behavioralQs = context.behavioralQuestions.map((q, i) =>
+        `${i + 1}. ${q.question}`
+    ).join("\n");
+
+    const skillGaps = context.skillGaps.map(g =>
+        `- ${g.skill} (${g.severity} priority)`
+    ).join("\n");
+
+    const previousMessages = chatHistory
+        .slice(0, -1) // Exclude the current user message
+        .map(m => `${m.role === "user" ? "Candidate" : "Interviewer"}: ${m.content}`)
+        .join("\n");
+
+    const prompt = `You are an expert interview coach conducting a realistic mock interview. Use the context below to ask relevant follow-up questions, provide feedback, or continue the interview conversation naturally.
+
+CANDIDATE CONTEXT:
+Job Description: ${context.jobDescription}
+Match Score: ${context.matchScore}/100
+
+Candidate's Background:
+${context.resume || context.selfDescription}
+
+Available Technical Questions (use these as inspiration):
+${technicalQs}
+
+Available Behavioral Questions (use these as inspiration):
+${behavioralQs}
+
+Skill Gaps to Address:
+${skillGaps}
+
+Previous Conversation:
+${previousMessages || "This is the start of the interview."}
+
+INSTRUCTIONS:
+- Ask one focused follow-up question at a time based on the conversation flow
+- OR provide constructive feedback on the candidate's previous answer
+- OR ask a new relevant question from the available questions
+- Keep responses concise (2-4 sentences for questions, 3-5 sentences for feedback)
+- Be encouraging but realistic
+- If the candidate asks for tips, provide actionable advice
+- Reference specific skills from the skill gaps when relevant
+- Maintain a professional but friendly tone`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+    });
+
+    return response.text?.trim() || "I'm not sure how to respond to that. Would you like to try another approach or ask about a specific question?";
+}
+
+// ── Cover Letter Generation ───────────────────────────────────────────────────
+
+interface CoverLetterParams {
+    resume: string;
+    jobDescription: string;
+    matchScore: number;
+    tone: "professional" | "friendly" | "confident";
+    length: "short" | "medium" | "long";
+}
+
+export async function generateCoverLetterContent(
+    params: CoverLetterParams
+): Promise<string> {
+    const { resume, jobDescription, matchScore, tone, length } = params;
+
+    const toneInstructions: Record<string, string> = {
+        professional: "Use a professional, formal tone that emphasizes qualifications and alignment with company values.",
+        friendly: "Use a warm, personable tone that highlights cultural fit and enthusiasm while maintaining professionalism.",
+        confident: "Use a bold, assertive tone that emphasizes achievements, impact, and direct value proposition.",
+    };
+
+    const lengthInstructions: Record<string, string> = {
+        short: "Write a concise cover letter of 150-200 words. Get straight to the point with key qualifications.",
+        medium: "Write a standard cover letter of 250-300 words. Cover introduction, qualifications, and closing.",
+        long: "Write a comprehensive cover letter of 400-500 words. Provide detailed examples of achievements and specific alignment with the role.",
+    };
+
+    const prompt = `You are an expert cover letter writer. Generate a compelling, personalized cover letter based on the provided information.
+
+CANDIDATE INFORMATION:
+Resume/Background:
+${resume || "No resume provided - use the self-description below"}
+
+Target Job Description:
+${jobDescription}
+
+Match Score: ${matchScore}/100
+
+REQUIREMENTS:
+- Tone: ${toneInstructions[tone]}
+- Length: ${lengthInstructions[length]}
+- Address the key requirements from the job description
+- Highlight relevant skills and experience that match the role
+- Show genuine interest in the company and role
+- Include a strong opening hook and clear call to action
+- Do NOT use placeholders like [Company Name] - use "your company" or "the team"
+- Do NOT invent specific company facts - keep it generic and adaptable
+
+Write ONLY the cover letter content. No headers, no subject lines, no salutations beyond "Dear Hiring Manager,".`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+    });
+
+    return response.text?.trim() || "";
+}

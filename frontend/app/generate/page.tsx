@@ -25,7 +25,15 @@ export default function GeneratePage() {
   const [dragOver, setDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progressStep, setProgressStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const PROGRESS_STEPS = [
+    { label: "Analyzing job requirements", icon: "M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" },
+    { label: "Comparing with your profile", icon: "M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" },
+    { label: "Generating questions", icon: "M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" },
+    { label: "Building prep plan", icon: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" },
+  ];
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -63,6 +71,13 @@ export default function GeneratePage() {
     if (resumeFile) formData.append("resume", resumeFile);
 
     setSubmitting(true);
+    setProgressStep(0);
+
+    // Animate progress steps
+    const progressInterval = setInterval(() => {
+      setProgressStep((prev) => Math.min(prev + 1, PROGRESS_STEPS.length - 1));
+    }, 3000);
+
     try {
       const res = await api.post<{
         message: string;
@@ -70,14 +85,17 @@ export default function GeneratePage() {
       }>("/interview-reports", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      clearInterval(progressInterval);
       router.push(`/dashboard/report/${res.data.interviewReport._id}`);
     } catch (err: unknown) {
+      clearInterval(progressInterval);
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
           ?.message ?? "Failed to generate report. Please try again.";
       setError(msg);
     } finally {
       setSubmitting(false);
+      setProgressStep(0);
     }
   };
 
@@ -343,8 +361,15 @@ export default function GeneratePage() {
 
               {submitting ? (
                 <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Analyzing &amp; generating your report…
+                  <div className="flex items-center gap-3">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    <span className="flex items-center gap-2">
+                      {PROGRESS_STEPS[progressStep].label}
+                      <svg className="h-4 w-4 animate-pulse" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d={PROGRESS_STEPS[progressStep].icon} />
+                      </svg>
+                    </span>
+                  </div>
                 </>
               ) : (
                 <>

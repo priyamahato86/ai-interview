@@ -7,8 +7,90 @@ import { useAuth } from "@/hooks/useAuth";
 import { interviewApi } from "@/lib/interviewApi";
 import MatchScoreRing from "./MatchScoreRing";
 import ResumeCustomizationModal from "@/components/resume/ResumeCustomizationModal";
+import ChatInterface from "./ChatInterface";
+import CoverLetterModal from "@/components/CoverLetterModal";
 import type { InterviewReport, SkillGap } from "@/types/interview";
 import type { ResumeCustomization } from "@/types/resume";
+
+interface ShareModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  shareUrl: string;
+  shareToken: string;
+}
+
+function ShareModal({ isOpen, onClose, shareUrl, shareToken }: ShareModalProps) {
+  const [copied, setCopied] = useState(false);
+
+  const fullUrl = typeof window !== "undefined"
+    ? `${window.location.origin}${shareUrl}`
+    : shareUrl;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(fullUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-6 shadow-xl">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">Share Report</h2>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-800 hover:text-gray-300"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-indigo-950/50 border border-indigo-900/50 p-4">
+          <p className="text-sm text-indigo-300">
+            Anyone with this link can view your report (read-only). Your personal information is not shared.
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500">
+            Share Link
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={fullUrl}
+              readOnly
+              className="flex-1 rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 outline-none"
+            />
+            <button
+              onClick={handleCopy}
+              className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
+                copied
+                  ? "bg-emerald-600 text-white"
+                  : "bg-indigo-600 text-white hover:bg-indigo-500"
+              }`}
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-xl px-6 py-2 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type Section = "technical" | "behavioral" | "roadmap";
 
@@ -144,6 +226,11 @@ export default function ReportDetailView({ id }: { id: string }) {
   const [activeSection, setActiveSection] = useState<Section>("technical");
   const [downloading, setDownloading] = useState(false);
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareData, setShareData] = useState<{ shareUrl: string; shareToken: string } | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showCoverLetter, setShowCoverLetter] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -167,6 +254,30 @@ export default function ReportDetailView({ id }: { id: string }) {
       // silently ignore
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      const data = await interviewApi.shareReport(id);
+      setShareData(data);
+      setShowShareModal(true);
+    } catch {
+      setError("Failed to share report.");
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleUnshare = async () => {
+    try {
+      await interviewApi.unshareReport(id);
+      if (report) {
+        setReport({ ...report, isShared: false, shareToken: undefined });
+      }
+    } catch {
+      setError("Failed to unshare report.");
     }
   };
 
@@ -231,6 +342,51 @@ export default function ReportDetailView({ id }: { id: string }) {
           </div>
           <div className="flex items-center gap-4 shrink-0">
             <span className="hidden md:block text-xs text-gray-600">{formatDate(report.createdAt)}</span>
+            {report.isShared ? (
+              <button
+                onClick={handleShare}
+                disabled={sharing}
+                className="flex items-center gap-2 rounded-xl bg-emerald-600/20 border border-emerald-600/40 text-emerald-400 hover:bg-emerald-600/30 disabled:opacity-50 px-4 py-2 text-sm font-medium transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                </svg>
+                Shared
+              </button>
+            ) : (
+              <button
+                onClick={handleShare}
+                disabled={sharing}
+                className="flex items-center gap-2 rounded-xl border border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-200 disabled:opacity-50 px-4 py-2 text-sm font-medium transition-colors"
+              >
+                {sharing ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400/30 border-t-gray-400" />
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
+                  </svg>
+                )}
+                Share
+              </button>
+            )}
+            <button
+              onClick={() => setShowChat(true)}
+              className="flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 1 0-.697.972.972 0 0 1-.537-.086 5 5 0 0 1-.99-.21c-.2-.082-.392-.163-.583-.243a5.998 5.998 0 0 1-.45-.721c-.038-.181-.07-.362-.105-.543a1 1 0 0 0-.122-.516A1 1 0 0 0 3 12" />
+              </svg>
+              Practice Interview
+            </button>
+            <button
+              onClick={() => setShowCoverLetter(true)}
+              className="flex items-center gap-2 rounded-xl border border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-200 px-4 py-2 text-sm font-medium transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+              </svg>
+              Cover Letter
+            </button>
             <button
               onClick={() => setShowCustomizationModal(true)}
               disabled={downloading}
@@ -468,6 +624,30 @@ export default function ReportDetailView({ id }: { id: string }) {
         onDownload={handleDownload}
         loading={downloading}
       />
+
+      {shareData && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          shareUrl={shareData.shareUrl}
+          shareToken={shareData.shareToken}
+        />
+      )}
+
+      {showChat && (
+        <ChatInterface
+          reportId={id}
+          onClose={() => setShowChat(false)}
+        />
+      )}
+
+      {showCoverLetter && (
+        <CoverLetterModal
+          isOpen={showCoverLetter}
+          onClose={() => setShowCoverLetter(false)}
+          reportId={id}
+        />
+      )}
     </div>
   );
 }

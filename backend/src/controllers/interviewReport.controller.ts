@@ -77,7 +77,25 @@ export const getAllInterviewReportsController = async (
     req: Request,
     res: Response
 ): Promise<void> => {
-    const interviewReports = await InterviewReport.find({ user: req.user!._id })
+    const { search, minScore, maxScore } = req.query as {
+        search?: string;
+        minScore?: string;
+        maxScore?: string;
+    };
+
+    const query: Record<string, unknown> = { user: req.user!._id };
+
+    if (search) {
+        query.title = { $regex: search, $options: "i" };
+    }
+
+    if (minScore || maxScore) {
+        query.matchScore = {};
+        if (minScore) query.matchScore.$gte = Number(minScore);
+        if (maxScore) query.matchScore.$lte = Number(maxScore);
+    }
+
+    const interviewReports = await InterviewReport.find(query)
         .sort({ createdAt: -1 })
         .select(
             "-resume -selfDescription -jobDescription -__v -technicalQuestions -behavioralQuestions -skillGaps -preparationPlan"

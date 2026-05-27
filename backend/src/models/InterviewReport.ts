@@ -34,6 +34,15 @@ export interface IInterviewReport {
   preparationPlan: IPreparationPlan[];
   user: mongoose.Types.ObjectId;
   title: string;
+  shareToken?: string;
+  isShared: boolean;
+  chatHistory?: IChatMessage[];
+}
+
+export interface IChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
 }
 
 export type InterviewReportDoc = HydratedDocument<IInterviewReport>;
@@ -78,6 +87,15 @@ const preparationPlanSchema = new Schema<IPreparationPlan>(
   { _id: false }
 );
 
+const chatMessageSchema = new Schema<IChatMessage>(
+  {
+    role: { type: String, enum: ["user", "assistant"], required: true },
+    content: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const interviewReportSchema = new Schema<IInterviewReport, InterviewReportModel>(
   {
     jobDescription: { type: String, required: [true, "Job description is required"] },
@@ -90,9 +108,17 @@ const interviewReportSchema = new Schema<IInterviewReport, InterviewReportModel>
     preparationPlan: [preparationPlanSchema],
     user: { type: Schema.Types.ObjectId, ref: "User", required: [true, "User is required"] },
     title: { type: String, required: [true, "Job title is required"] },
+    shareToken: { type: String },
+    isShared: { type: Boolean, default: false },
+    chatHistory: [chatMessageSchema],
   },
   { timestamps: true }
 );
+
+// Database indexes for query optimization
+interviewReportSchema.index({ user: 1, createdAt: -1 });
+interviewReportSchema.index({ user: 1, _id: 1 });
+interviewReportSchema.index({ shareToken: 1 }, { sparse: true });
 
 export const InterviewReport = mongoose.model<IInterviewReport, InterviewReportModel>(
   "InterviewReport",

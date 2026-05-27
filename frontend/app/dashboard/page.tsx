@@ -75,19 +75,49 @@ export default function DashboardPage() {
   const [reports, setReports] = useState<InterviewReportSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [minScore, setMinScore] = useState<string>("");
+  const [maxScore, setMaxScore] = useState<string>("");
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading, router]);
 
+  const handleClearFilters = () => {
+    setSearch("");
+    setDebouncedSearch(""); // Clear immediately for instant feedback
+    setMinScore("");
+    setMaxScore("");
+  };
+
+  // Debounce search input (only when typing, not when clearing)
+  useEffect(() => {
+    // Skip if search was cleared (matches debounced value being empty)
+    if (search === "" && debouncedSearch === "") return;
+
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Fetch reports with filters
   useEffect(() => {
     if (!user) return;
+    setLoading(true);
+    setHasLoadedOnce(true);
     interviewApi
-      .getAllReports()
+      .getAllReports({
+        search: debouncedSearch || undefined,
+        minScore: minScore ? Number(minScore) : undefined,
+        maxScore: maxScore ? Number(maxScore) : undefined,
+      })
       .then((res) => setReports(res))
       .catch(() => setError("Failed to load reports."))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, debouncedSearch, minScore, maxScore]);
 
   if (authLoading || (!user && !authLoading)) {
     return (
@@ -95,9 +125,10 @@ export default function DashboardPage() {
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
       </div>
     );
-  }
+}
 
   const hasReports = !loading && reports.length > 0;
+  const hasFilters = search || minScore || maxScore;
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -231,7 +262,7 @@ export default function DashboardPage() {
                 ].map((s) => (
                   <div
                     key={s.label}
-                    className="flex items-center gap-3 rounded-2xl border border-gray-800/80 bg-gray-900/60 px-4 py-3 backdrop-blur-sm"
+                    className="flex items-center gap-3 rounded-2xl border border-gray-700 bg-gray-900 px-4 py-3 backdrop-blur-sm"
                   >
                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ${s.iconBg}`}>
                       <svg className={`h-4 w-4 ${s.iconAccent}`} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -245,7 +276,7 @@ export default function DashboardPage() {
                       >
                         {s.value}
                       </p>
-                      <p className="mt-0.5 text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      <p className="mt-0.5 text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         {s.label}
                       </p>
                     </div>
@@ -297,12 +328,65 @@ export default function DashboardPage() {
         {/* ── Reports grid ── */}
         {hasReports && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
+            {/* Search and Filter Bar */}
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+              <div className="flex flex-1 items-center gap-3">
+                {/* Search Input */}
+                <div className="relative flex-1 max-w-md">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search reports..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full rounded-xl border border-gray-600 bg-gray-900 pl-10 pr-4 py-2.5 text-sm text-gray-200 placeholder:text-gray-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20"
+                  />
+                </div>
+
+                {/* Score Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Score:</span>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    min="0"
+                    max="100"
+                    value={minScore}
+                    onChange={(e) => setMinScore(e.target.value)}
+                    className="w-16 rounded-lg border border-gray-600 bg-gray-900 px-2 py-2 text-sm text-gray-200 placeholder:text-gray-400 outline-none focus:border-indigo-500 text-center"
+                  />
+                  <span className="text-gray-400">-</span>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    min="0"
+                    max="100"
+                    value={maxScore}
+                    onChange={(e) => setMaxScore(e.target.value)}
+                    className="w-16 rounded-lg border border-gray-600 bg-gray-900 px-2 py-2 text-sm text-gray-200 placeholder:text-gray-400 outline-none focus:border-indigo-500 text-center"
+                  />
+                </div>
+
+                {hasFilters && (
+                  <button
+                    onClick={handleClearFilters}
+                    className="flex items-center gap-1 rounded-lg px-2 py-2 text-xs text-gray-500 hover:bg-gray-800 hover:text-gray-300 transition-colors"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                    Clear
+                  </button>
+                )}
+              </div>
+
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">
-                Recent Reports
+                {reports.length} {reports.length === 1 ? "report" : "reports"}
               </h2>
-              <span className="text-xs font-medium text-indigo-400">{reports.length} total</span>
             </div>
+
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {reports.map((report) => (
                 <ReportCard key={report._id} report={report} />
@@ -311,8 +395,30 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Empty state ── */}
-        {!loading && !error && reports.length === 0 && (
+        {/* ── No results from search/filter ── */}
+        {!loading && !error && hasLoadedOnce && reports.length === 0 && hasFilters && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-800">
+              <svg className="h-8 w-8 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+            </div>
+            <h2 className="mb-2 text-lg font-semibold text-white">No reports found</h2>
+            <p className="mb-6 text-sm text-gray-500">No reports match your search or filter criteria.</p>
+            <button
+              onClick={handleClearFilters}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+              Clear Filters
+            </button>
+          </div>
+        )}
+
+        {/* ── Empty state (no reports yet) ── */}
+        {!loading && !error && hasLoadedOnce && reports.length === 0 && !hasFilters && (
           <div className="space-y-8">
             {/* Central CTA card */}
             <div className="relative overflow-hidden rounded-3xl border border-dashed border-gray-800 bg-linear-to-b from-gray-900/80 to-gray-950 p-10 text-center">

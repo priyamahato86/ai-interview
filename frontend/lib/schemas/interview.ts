@@ -39,6 +39,8 @@ export const interviewReportSchema = z.object({
   preparationPlan: z.array(preparationPlanSchema),
   user: z.string(),
   title: z.string(),
+  shareToken: z.string().optional(),
+  isShared: z.boolean().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -49,6 +51,8 @@ export const interviewReportSummarySchema = z.object({
   matchScore: z.number().min(0).max(100),
   title: z.string(),
   user: z.string(),
+  shareToken: z.string().optional(),
+  isShared: z.boolean().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
