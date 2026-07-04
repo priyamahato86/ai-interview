@@ -39,6 +39,25 @@ export default function GeneratePage() {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading, router]);
 
+  const DRAFT_KEY = "generate-form-draft";
+
+  useEffect(() => {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (!saved) return;
+    try {
+      const draft = JSON.parse(saved) as { jobDescription?: string; selfDescription?: string };
+      if (draft.jobDescription) setJobDescription(draft.jobDescription);
+      if (draft.selfDescription) setSelfDescription(draft.selfDescription);
+    } catch {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!jobDescription && !selfDescription) return;
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ jobDescription, selfDescription }));
+  }, [jobDescription, selfDescription]);
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
@@ -86,6 +105,7 @@ export default function GeneratePage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       clearInterval(progressInterval);
+      localStorage.removeItem(DRAFT_KEY);
       router.push(`/dashboard/report/${res.data.interviewReport._id}`);
     } catch (err: unknown) {
       clearInterval(progressInterval);
