@@ -78,6 +78,17 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       {/* Right form panel */}
       <div className="flex flex-1 items-center justify-center bg-gray-50 px-6 py-12 dark:bg-gray-950">
         <div className="w-full max-w-md">
+          {/* Back to home */}
+          <Link
+            href="/"
+            className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+            Back to home
+          </Link>
+
           {/* Mobile-only logo */}
           <Link href="/" className="mb-10 flex items-center gap-3 md:hidden">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600">
