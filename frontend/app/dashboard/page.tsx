@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { interviewApi } from "@/lib/interviewApi";
 import ReportCard from "@/components/dashboard/ReportCard";
+import { MIN_COMPARE_REPORTS, MAX_COMPARE_REPORTS } from "@/lib/compareConfig";
 import type { InterviewReportSummary } from "@/types/interview";
 
 const PREVIEW_FEATURES = [
@@ -80,6 +81,8 @@ export default function DashboardPage() {
   const [minScore, setMinScore] = useState<string>("");
   const [maxScore, setMaxScore] = useState<string>("");
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -90,6 +93,27 @@ export default function DashboardPage() {
     setDebouncedSearch(""); // Clear immediately for instant feedback
     setMinScore("");
     setMaxScore("");
+  };
+
+  const toggleCompareMode = () => {
+    setCompareMode((prev) => !prev);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else if (next.size < MAX_COMPARE_REPORTS) {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleCompare = () => {
+    router.push(`/compare?ids=${Array.from(selectedIds).join(",")}`);
   };
 
   // Debounce search input (only when typing, not when clearing)
@@ -301,7 +325,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Main content ── */}
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className={`mx-auto max-w-7xl px-6 py-8 ${compareMode ? "pb-24" : ""}`}>
 
         {/* Error */}
         {error && (
@@ -382,14 +406,42 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">
-                {reports.length} {reports.length === 1 ? "report" : "reports"}
-              </h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">
+                  {reports.length} {reports.length === 1 ? "report" : "reports"}
+                </h2>
+                {reports.length >= 2 && (
+                  <button
+                    onClick={toggleCompareMode}
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      compareMode
+                        ? "bg-indigo-600/10 text-indigo-400"
+                        : "text-gray-500 hover:bg-gray-800 hover:text-gray-300"
+                    }`}
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
+                    </svg>
+                    {compareMode ? "Cancel" : "Compare"}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {reports.map((report) => (
-                <ReportCard key={report._id} report={report} />
+                <ReportCard
+                  key={report._id}
+                  report={report}
+                  selectionMode={compareMode}
+                  selected={selectedIds.has(report._id)}
+                  onToggleSelect={toggleSelect}
+                  selectionDisabled={
+                    compareMode &&
+                    !selectedIds.has(report._id) &&
+                    selectedIds.size >= MAX_COMPARE_REPORTS
+                  }
+                />
               ))}
             </div>
           </div>
@@ -485,6 +537,32 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* ── Compare mode action bar ── */}
+      {compareMode && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-800/80 bg-gray-950/95 px-6 py-4 backdrop-blur-md">
+          <div className="mx-auto flex max-w-7xl items-center justify-between">
+            <span className="text-sm text-gray-400">
+              {selectedIds.size} of {MAX_COMPARE_REPORTS} selected · min {MIN_COMPARE_REPORTS} required
+            </span>
+            <div className="flex gap-3">
+              <button
+                onClick={toggleCompareMode}
+                className="rounded-xl px-4 py-2 text-sm text-gray-400 hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={selectedIds.size < MIN_COMPARE_REPORTS}
+                onClick={handleCompare}
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Compare Selected
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
