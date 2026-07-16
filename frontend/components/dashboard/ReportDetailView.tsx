@@ -155,9 +155,11 @@ interface QuestionItemProps {
   question: string;
   intention: string;
   answer: string;
+  practiced: boolean;
+  onTogglePracticed: () => void;
 }
 
-function QuestionItem({ index, question, intention, answer }: QuestionItemProps) {
+function QuestionItem({ index, question, intention, answer, practiced, onTogglePracticed }: QuestionItemProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -166,16 +168,40 @@ function QuestionItem({ index, question, intention, answer }: QuestionItemProps)
         open ? "border-indigo-600/40 bg-gray-900/80" : "border-gray-800/80 hover:border-gray-700"
       }`}
     >
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-start gap-4 px-6 py-5 text-left"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+        className="flex w-full cursor-pointer items-start gap-4 px-6 py-5 text-left"
       >
         <span className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600/20 text-xs font-bold text-indigo-400 ring-1 ring-indigo-500/30 mt-0.5">
           Q{index + 1}
         </span>
-        <span className="flex-1 text-sm font-medium text-gray-200 leading-relaxed pr-2">
+        <span className={`flex-1 text-sm font-medium leading-relaxed pr-2 ${practiced ? "text-gray-500 line-through decoration-gray-600" : "text-gray-200"}`}>
           {question}
         </span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePracticed();
+          }}
+          title={practiced ? "Mark as not practiced" : "Mark as practiced"}
+          className={`shrink-0 flex h-6 w-6 items-center justify-center rounded-full transition-all duration-200 mt-0.5 ring-1 ${
+            practiced
+              ? "bg-emerald-600/20 text-emerald-400 ring-emerald-500/40"
+              : "text-gray-600 ring-gray-700 hover:text-gray-400 hover:ring-gray-500"
+          }`}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+        </button>
         <div className={`shrink-0 flex h-6 w-6 items-center justify-center rounded-full transition-all duration-200 mt-0.5 ${open ? "bg-indigo-600/20 text-indigo-400" : "text-gray-600 group-hover:text-gray-400"}`}>
           <svg
             className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -187,7 +213,7 @@ function QuestionItem({ index, question, intention, answer }: QuestionItemProps)
             <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
           </svg>
         </div>
-      </button>
+      </div>
 
       {open && (
         <div className="border-t border-indigo-600/20 mx-6 mb-5">
@@ -231,6 +257,8 @@ export default function ReportDetailView({ id }: { id: string }) {
   const [sharing, setSharing] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showCoverLetter, setShowCoverLetter] = useState(false);
+  const [practiced, setPracticed] = useState<Set<string>>(new Set());
+  const [doneDays, setDoneDays] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -240,10 +268,36 @@ export default function ReportDetailView({ id }: { id: string }) {
     if (!user) return;
     interviewApi
       .getReportById(id)
-      .then((res) => setReport(res))
+      .then((res) => {
+        setReport(res);
+        setPracticed(new Set(res.practicedQuestions ?? []));
+        setDoneDays(new Set(res.completedDays ?? []));
+      })
       .catch(() => setError("Failed to load report."))
       .finally(() => setLoading(false));
   }, [user, id]);
+
+  const togglePracticed = (key: string) => {
+    const previous = practiced;
+    const next = new Set(previous);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setPracticed(next);
+    interviewApi
+      .updateProgress(id, { practicedQuestions: Array.from(next) })
+      .catch(() => setPracticed(previous));
+  };
+
+  const toggleDay = (day: number) => {
+    const previous = doneDays;
+    const next = new Set(previous);
+    if (next.has(day)) next.delete(day);
+    else next.add(day);
+    setDoneDays(next);
+    interviewApi
+      .updateProgress(id, { completedDays: Array.from(next) })
+      .catch(() => setDoneDays(previous));
+  };
 
   const handleDownload = async (customization: ResumeCustomization) => {
     setShowCustomizationModal(false);
@@ -310,6 +364,14 @@ export default function ReportDetailView({ id }: { id: string }) {
   }
 
   const label = scoreLabel(report.matchScore);
+  const totalProgressItems =
+    report.technicalQuestions.length +
+    report.behavioralQuestions.length +
+    report.preparationPlan.length;
+  const completedProgressItems = practiced.size + doneDays.size;
+  const completionPercentage = totalProgressItems
+    ? Math.round((completedProgressItems / totalProgressItems) * 100)
+    : 0;
   const highGaps = report.skillGaps.filter((g) => g.severity === "high").length;
   const medGaps = report.skillGaps.filter((g) => g.severity === "medium").length;
   const lowGaps = report.skillGaps.filter((g) => g.severity === "low").length;
@@ -484,6 +546,33 @@ export default function ReportDetailView({ id }: { id: string }) {
           </div>
         )}
 
+        {/* ── Prep Progress ─────────────────────────────────────────────────── */}
+        <div className="mb-8 rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-600">
+              Prep Progress
+            </p>
+            <span className={`text-sm font-bold ${completionPercentage === 100 ? "text-emerald-400" : "text-indigo-400"}`}>
+              {completionPercentage}%
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-gray-800">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                completionPercentage === 100
+                  ? "bg-emerald-500"
+                  : "bg-linear-to-r from-indigo-500 to-violet-500"
+              }`}
+              style={{ width: `${completionPercentage}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-gray-600">
+            {completedProgressItems} of {totalProgressItems} items done · {practiced.size} question
+            {practiced.size !== 1 ? "s" : ""} practiced · {doneDays.size} day
+            {doneDays.size !== 1 ? "s" : ""} completed
+          </p>
+        </div>
+
         {/* ── Main Two-Column Layout ────────────────────────────────────────── */}
         <div className="flex gap-8 pb-16">
 
@@ -560,11 +649,13 @@ export default function ReportDetailView({ id }: { id: string }) {
               <div className="space-y-3">
                 {activeQuestions.map((q, i) => (
                   <QuestionItem
-                    key={i}
+                    key={`${activeSection}-${i}`}
                     index={i}
                     question={q.question}
                     intention={q.intention}
                     answer={q.answer}
+                    practiced={practiced.has(`${activeSection}-${i}`)}
+                    onTogglePracticed={() => togglePracticed(`${activeSection}-${i}`)}
                   />
                 ))}
               </div>
@@ -576,12 +667,16 @@ export default function ReportDetailView({ id }: { id: string }) {
                 {/* Vertical connector line */}
                 <div className="absolute left-6.75 top-10 bottom-10 w-px bg-gray-800 hidden sm:block" />
                 <div className="space-y-4">
-                  {report.preparationPlan.map((plan, idx) => (
+                  {report.preparationPlan.map((plan, idx) => {
+                    const dayDone = doneDays.has(plan.day);
+                    return (
                     <div key={plan.day} className="relative flex gap-5">
                       {/* Day badge */}
                       <div className="shrink-0 flex flex-col items-center gap-1 z-10">
                         <div className={`flex h-14 w-14 flex-col items-center justify-center rounded-2xl text-center ring-1 ${
-                          idx === 0
+                          dayDone
+                            ? "bg-emerald-600/20 ring-emerald-500/50 text-emerald-400"
+                            : idx === 0
                             ? "bg-indigo-600 ring-indigo-500/50 text-white"
                             : "bg-gray-900 ring-gray-800 text-indigo-400"
                         }`}>
@@ -590,13 +685,30 @@ export default function ReportDetailView({ id }: { id: string }) {
                         </div>
                       </div>
                       {/* Card */}
-                      <div className="flex-1 rounded-2xl border border-gray-800 bg-gray-900/50 hover:border-gray-700 transition-colors p-5 mb-0">
-                        <h3 className="text-base font-semibold text-white mb-3">{plan.focus}</h3>
+                      <div className={`flex-1 rounded-2xl border bg-gray-900/50 transition-colors p-5 mb-0 ${
+                        dayDone ? "border-emerald-800/50" : "border-gray-800 hover:border-gray-700"
+                      }`}>
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <h3 className={`text-base font-semibold ${dayDone ? "text-gray-400" : "text-white"}`}>{plan.focus}</h3>
+                          <button
+                            onClick={() => toggleDay(plan.day)}
+                            className={`shrink-0 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
+                              dayDone
+                                ? "bg-emerald-600/15 text-emerald-400 ring-emerald-600/40 hover:bg-emerald-600/25"
+                                : "text-gray-500 ring-gray-700 hover:bg-gray-800 hover:text-gray-300"
+                            }`}
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                            {dayDone ? "Completed" : "Mark done"}
+                          </button>
+                        </div>
                         <ul className="space-y-2.5">
                           {plan.tasks.map((task, ti) => (
-                            <li key={ti} className="flex items-start gap-3 text-sm text-gray-400">
+                            <li key={ti} className={`flex items-start gap-3 text-sm ${dayDone ? "text-gray-600" : "text-gray-400"}`}>
                               <svg
-                                className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500"
+                                className={`mt-0.5 h-4 w-4 shrink-0 ${dayDone ? "text-emerald-600" : "text-emerald-500"}`}
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 strokeWidth={2}
@@ -610,7 +722,8 @@ export default function ReportDetailView({ id }: { id: string }) {
                         </ul>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -92,6 +92,19 @@ export const interviewApi = {
     await api.delete(`/interview-reports/${reportId}/chat`);
   },
 
+  updateProgress: async (
+    id: string,
+    progress: { practicedQuestions?: string[]; completedDays?: number[] }
+  ): Promise<{ completionPercentage: number }> => {
+    const response = await api.patch<{
+      message: string;
+      completionPercentage: number;
+      practicedQuestions: string[];
+      completedDays: number[];
+    }>(`/interview-reports/${id}/progress`, progress);
+    return { completionPercentage: response.data.completionPercentage };
+  },
+
   downloadResume: async (id: string, customization?: Partial<ResumeCustomization>) => {
     const params = new URLSearchParams();
     if (customization) {

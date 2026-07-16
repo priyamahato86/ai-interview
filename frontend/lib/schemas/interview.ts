@@ -41,6 +41,8 @@ export const interviewReportSchema = z.object({
   title: z.string(),
   shareToken: z.string().optional(),
   isShared: z.boolean().optional(),
+  practicedQuestions: z.array(z.string()).optional(),
+  completedDays: z.array(z.number()).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

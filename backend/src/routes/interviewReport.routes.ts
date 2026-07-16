@@ -5,12 +5,14 @@ import { uploadResume } from "../middleware/upload.middleware.js";
 import { validate } from "../middleware/validate.js";
 import {
   generateReportSchema,
+  updateProgressSchema,
 } from "../schemas/interview.js";
 import {
   generateInterviewReportController,
   getInterviewReportByIdController,
   getAllInterviewReportsController,
   generateResumePdfController,
+  updateProgressController,
 } from "../controllers/interviewReport.controller.js";
 import {
   shareReportController,
@@ -58,6 +60,12 @@ router.delete(
   "/:interviewId/share",
   validate({ params: objectIdSchema }),
   unshareReportController
+);
+
+router.patch(
+  "/:interviewId/progress",
+  validate({ params: objectIdSchema, body: updateProgressSchema }),
+  updateProgressController
 );
 
 // Chat endpoints

@@ -68,3 +68,18 @@ export const generateReportSchema = z.object({
 });
 
 export type GenerateReportInput = z.infer<typeof generateReportSchema>;
+
+export const updateProgressSchema = z
+  .object({
+    practicedQuestions: z
+      .array(z.string().regex(/^(technical|behavioral)-\d+$/, "Invalid question key"))
+      .max(200)
+      .optional(),
+    completedDays: z.array(z.number().int().positive().max(365)).max(60).optional(),
+  })
+  .refine(
+    (data) => data.practicedQuestions !== undefined || data.completedDays !== undefined,
+    { message: "At least one of practicedQuestions or completedDays is required" }
+  );
+
+export type UpdateProgressInput = z.infer<typeof updateProgressSchema>;

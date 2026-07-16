@@ -37,6 +37,8 @@ export interface IInterviewReport {
   shareToken?: string;
   isShared: boolean;
   chatHistory?: IChatMessage[];
+  practicedQuestions: string[];
+  completedDays: number[];
 }
 
 export interface IChatMessage {
@@ -111,6 +113,8 @@ const interviewReportSchema = new Schema<IInterviewReport, InterviewReportModel>
     shareToken: { type: String },
     isShared: { type: Boolean, default: false },
     chatHistory: [chatMessageSchema],
+    practicedQuestions: [{ type: String }],
+    completedDays: [{ type: Number }],
   },
   { timestamps: true }
 );

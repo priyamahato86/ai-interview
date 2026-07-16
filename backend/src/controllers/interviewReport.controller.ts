@@ -107,6 +107,64 @@ export const getAllInterviewReportsController = async (
     })
 }
 
+export const updateProgressController = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const { interviewId } = req.params
+    const { practicedQuestions, completedDays } = req.body as {
+        practicedQuestions?: string[]
+        completedDays?: number[]
+    }
+
+    const interviewReport = await InterviewReport.findOne({
+        _id: interviewId,
+        user: req.user!._id,
+    })
+
+    if (!interviewReport) {
+        res.status(404).json({ message: "Interview report not found." })
+        return
+    }
+
+    if (practicedQuestions) {
+        const isValidKey = (key: string): boolean => {
+            const match = /^(technical|behavioral)-(\d+)$/.exec(key)
+            if (!match) return false
+            const index = Number(match[2])
+            return match[1] === "technical"
+                ? index < interviewReport.technicalQuestions.length
+                : index < interviewReport.behavioralQuestions.length
+        }
+        interviewReport.practicedQuestions = [...new Set(practicedQuestions)].filter(isValidKey)
+    }
+
+    if (completedDays) {
+        interviewReport.completedDays = [...new Set(completedDays)].filter((day) =>
+            interviewReport.preparationPlan.some((plan) => plan.day === day)
+        )
+    }
+
+    await interviewReport.save()
+
+    const totalItems =
+        interviewReport.technicalQuestions.length +
+        interviewReport.behavioralQuestions.length +
+        interviewReport.preparationPlan.length
+    const completedItems =
+        interviewReport.practicedQuestions.length + interviewReport.completedDays.length
+    const completionPercentage = totalItems
+        ? Math.round((completedItems / totalItems) * 100)
+        : 0
+
+    res.status(200).json({
+        message: "Progress updated successfully.",
+        completionPercentage,
+        practicedQuestions: interviewReport.practicedQuestions,
+        completedDays: interviewReport.completedDays,
+    })
+}
+
 export const generateResumePdfController = async (
     req: Request,
     res: Response
