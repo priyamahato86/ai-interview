@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { interviewApi } from "@/lib/interviewApi";
 import ReportCard from "@/components/dashboard/ReportCard";
+import ScoreHistoryChart from "@/components/ScoreHistoryChart";
 import { MIN_COMPARE_REPORTS, MAX_COMPARE_REPORTS } from "@/lib/compareConfig";
 import type { InterviewReportSummary } from "@/types/interview";
 
@@ -427,6 +428,8 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
+
+            <ScoreHistoryChart reports={reports} />
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {reports.map((report) => (
