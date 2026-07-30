@@ -17,7 +17,7 @@ export const validate = (options: ValidateOptions) => {
         // params is an object like { interviewId: "..." }, parse each value
         const parsedParams: Record<string, string> = {};
         for (const [key, value] of Object.entries(req.params)) {
-          parsedParams[key] = options.params.parse(String(value));
+          parsedParams[key] = options.params.parse(String(value)) as string;
         }
         req.params = parsedParams as typeof req.params;
       }

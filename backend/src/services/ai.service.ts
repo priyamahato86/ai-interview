@@ -152,7 +152,14 @@ export async function generateResumePdf(
         layout: customization?.layout ?? "header-main",
         colorScheme: customization?.colorScheme ?? "blue",
         fontFamily: customization?.fontFamily ?? "inter",
-        sections: customization?.sections ?? {},
+        sections: customization?.sections ?? {
+            summary: true,
+            experience: true,
+            education: true,
+            skills: true,
+            projects: true,
+            certifications: false,
+        },
         summaryLength: customization?.summaryLength ?? "standard",
         experienceDetail: customization?.experienceDetail ?? "standard",
     }

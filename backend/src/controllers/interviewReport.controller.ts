@@ -90,9 +90,10 @@ export const getAllInterviewReportsController = async (
     }
 
     if (minScore || maxScore) {
-        query.matchScore = {};
-        if (minScore) query.matchScore.$gte = Number(minScore);
-        if (maxScore) query.matchScore.$lte = Number(maxScore);
+        const matchScore: { $gte?: number; $lte?: number } = {};
+        if (minScore) matchScore.$gte = Number(minScore);
+        if (maxScore) matchScore.$lte = Number(maxScore);
+        query.matchScore = matchScore;
     }
 
     const interviewReports = await InterviewReport.find(query)
@@ -191,7 +192,7 @@ export const generateResumePdfController = async (
     }
 
     const q = req.query as Record<string, string | undefined>
-    const customization: Partial<ResumeCustomization> & Record<string, unknown> = {}
+    const customization: Record<string, unknown> = {}
     if (q.pageCount) customization.pageCount = q.pageCount
     if (q.theme) customization.theme = q.theme
     if (q.layout) customization.layout = q.layout
